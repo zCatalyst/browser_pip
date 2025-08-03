@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 300px;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .header h2 {
+      margin: 0;
+      color: #333;
+      font-size: 18px;
+    }
+    
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .btn {
+      padding: 12px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    
+    .btn-primary {
+      background: #2962ff;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #1e4fc2;
+    }
+    
+    .btn-secondary {
+      background: #e0e0e0;
+      color: #333;
+    }
+    
+    .btn-secondary:hover {
+      background: #d0d0d0;
+    }
+    
+    .btn-danger {
+      background: #f44336;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #d32f2f;
+    }
+    
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .status {
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    
+    .status.active {
+      background: #e8f5e8;
+      color: #2e7d32;
+      border: 1px solid #a5d6a7;
+    }
+    
+    .status.inactive {
+      background: #fafafa;
+      color: #666;
+      border: 1px solid #e0e0e0;
+    }
+    
+    .divider {
+      height: 1px;
+      background: #ddd;
+      margin: 16px 0;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 16px;
+    }
+    
+    .footer a {
+      color: #2962ff;
+      text-decoration: none;
+      font-size: 12px;
+    }
+    
+    .footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>📈 TradingView PiP</h2>
+  </div>
+  
+  <div id="status" class="status inactive">
+    Not capturing
+  </div>
+  
+  <div class="controls">
+    <button id="selectArea" class="btn btn-primary">
+      📐 Select Chart Area
+    </button>
+    
+    <button id="startCapture" class="btn btn-primary" disabled>
+      ▶️ Start Picture-in-Picture
+    </button>
+    
+    <button id="stopCapture" class="btn btn-danger" disabled>
+      ⏹️ Stop Capture
+    </button>
+    
+    <div class="divider"></div>
+    
+    <button id="openSettings" class="btn btn-secondary">
+      ⚙️ Settings & Preview
+    </button>
+  </div>
+  
+  <div class="footer">
+    <a href="#" id="help">Need help?</a>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>

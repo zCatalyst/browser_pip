@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>TradingView PiP Settings</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: #2962ff;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+    
+    .header p {
+      opacity: 0.9;
+      font-size: 14px;
+    }
+    
+    .content {
+      display: flex;
+      min-height: 500px;
+    }
+    
+    .sidebar {
+      width: 250px;
+      background: #fafafa;
+      border-right: 1px solid #e0e0e0;
+      padding: 20px;
+    }
+    
+    .nav-item {
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+    
+    .nav-item:hover {
+      background: #e3f2fd;
+    }
+    
+    .nav-item.active {
+      background: #2962ff;
+      color: white;
+    }
+    
+    .main-content {
+      flex: 1;
+      padding: 30px;
+    }
+    
+    .section {
+      display: none;
+    }
+    
+    .section.active {
+      display: block;
+    }
+    
+    .section h2 {
+      margin-bottom: 20px;
+      color: #333;
+      font-size: 20px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #555;
+    }
+    
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #2962ff;
+      box-shadow: 0 0 0 2px rgba(41, 98, 255, 0.2);
+    }
+    
+    .form-row {
+      display: flex;
+      gap: 15px;
+    }
+    
+    .form-row .form-group {
+      flex: 1;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: #2962ff;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #1e4fc2;
+    }
+    
+    .btn-secondary {
+      background: #e0e0e0;
+      color: #333;
+    }
+    
+    .btn-secondary:hover {
+      background: #d0d0d0;
+    }
+    
+    .preview-container {
+      border: 2px dashed #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      margin: 20px 0;
+      min-height: 200px;
+      position: relative;
+      background: #fafafa;
+    }
+    
+    .preview-container.active {
+      border-color: #2962ff;
+      background: #f3f7ff;
+    }
+    
+    .preview-video {
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .crop-preview {
+      border: 2px solid #2962ff;
+      background: rgba(41, 98, 255, 0.1);
+      position: absolute;
+      pointer-events: none;
+    }
+    
+    .info-box {
+      background: #e3f2fd;
+      border: 1px solid #bbdefb;
+      border-radius: 4px;
+      padding: 12px;
+      margin: 15px 0;
+      font-size: 13px;
+      color: #1565c0;
+    }
+    
+    .status-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    
+    .status-indicator.green {
+      background: #4caf50;
+    }
+    
+    .status-indicator.red {
+      background: #f44336;
+    }
+    
+    .status-indicator.orange {
+      background: #ff9800;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+    
+    .stat-card {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+      padding: 15px;
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #2962ff;
+      margin-bottom: 5px;
+    }
+    
+    .stat-label {
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📈 TradingView Picture-in-Picture</h1>
+      <p>Configure your floating chart overlay settings</p>
+    </div>
+    
+    <div class="content">
+      <div class="sidebar">
+        <div class="nav-item active" data-section="preview">🔍 Live Preview</div>
+        <div class="nav-item" data-section="overlay">🪟 Overlay Settings</div>
+        <div class="nav-item" data-section="capture">📹 Capture Settings</div>
+        <div class="nav-item" data-section="area">📐 Area Selection</div>
+        <div class="nav-item" data-section="about">ℹ️ About</div>
+      </div>
+      
+      <div class="main-content">
+        <!-- Live Preview Section -->
+        <div class="section active" id="preview">
+          <h2>Live Preview</h2>
+          <p>Test your settings and see how the picture-in-picture will look</p>
+          
+          <div class="preview-container" id="preview-container">
+            <div id="preview-content">
+              <p>📺 Click "Start Preview" to see your TradingView capture</p>
+              <button class="btn btn-primary" id="start-preview">Start Preview</button>
+            </div>
+            <video id="preview-video" class="preview-video" style="display: none;" autoplay muted></video>
+            <canvas id="preview-canvas" style="display: none;"></canvas>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <button class="btn btn-primary" id="test-area-selection">Test Area Selection</button>
+            </div>
+            <div class="form-group">
+              <button class="btn btn-secondary" id="stop-preview">Stop Preview</button>
+            </div>
+            <div class="form-group">
+              <button class="btn btn-success" id="pip-btn" disabled>📺 PiP</button>
+            </div>
+          </div>
+          
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value" id="preview-fps">--</div>
+              <div class="stat-label">FPS</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="preview-resolution">--</div>
+              <div class="stat-label">Resolution</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="crop-area-size">--</div>
+              <div class="stat-label">Crop Area</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Overlay Settings Section -->
+        <div class="section" id="overlay">
+          <h2>Overlay Window Settings</h2>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Default Width (px)</label>
+              <input type="number" id="overlay-width" value="400" min="200" max="1920">
+            </div>
+            <div class="form-group">
+              <label>Default Height (px)</label>
+              <input type="number" id="overlay-height" value="300" min="150" max="1080">
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Default Position X</label>
+              <input type="number" id="overlay-x" value="100" min="0">
+            </div>
+            <div class="form-group">
+              <label>Default Position Y</label>
+              <input type="number" id="overlay-y" value="100" min="0">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Opacity (%)</label>
+            <input type="range" id="overlay-opacity" min="20" max="100" value="100">
+            <span id="opacity-value">100%</span>
+          </div>
+          
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="always-on-top"> Keep window always on top
+            </label>
+          </div>
+          
+          <div class="form-group">
+            <button class="btn btn-primary" id="save-overlay-settings">Save Settings</button>
+          </div>
+        </div>
+        
+        <!-- Capture Settings Section -->
+        <div class="section" id="capture">
+          <h2>Capture Settings</h2>
+          
+          <div class="form-group">
+            <label>Video Quality</label>
+            <select id="video-quality">
+              <option value="720p">720p (Recommended)</option>
+              <option value="1080p">1080p (High Quality)</option>
+              <option value="480p">480p (Low Bandwidth)</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>Frame Rate (FPS)</label>
+            <select id="frame-rate">
+              <option value="15">15 FPS (Battery Saver)</option>
+              <option value="30">30 FPS (Recommended)</option>
+              <option value="60">60 FPS (Smooth)</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="auto-restart"> Auto-restart capture if connection fails
+            </label>
+          </div>
+          
+          <div class="info-box">
+            💡 Higher quality settings use more CPU and bandwidth. Use 720p/30fps for best balance.
+          </div>
+          
+          <div class="form-group">
+            <button class="btn btn-primary" id="save-capture-settings">Save Settings</button>
+          </div>
+        </div>
+        
+        <!-- Area Selection Section -->
+        <div class="section" id="area">
+          <h2>Chart Area Selection</h2>
+          
+          <div id="area-status">
+            <p><span class="status-indicator red"></span>No area selected</p>
+          </div>
+          
+          <div class="form-group">
+            <button class="btn btn-primary" id="select-new-area">Select New Area</button>
+            <button class="btn btn-secondary" id="clear-area">Clear Selection</button>
+          </div>
+          
+          <div id="area-details" style="display: none;">
+            <h3>Selected Area Details</h3>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-value" id="area-x">--</div>
+                <div class="stat-label">X Position</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="area-y">--</div>
+                <div class="stat-label">Y Position</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="area-width">--</div>
+                <div class="stat-label">Width</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="area-height">--</div>
+                <div class="stat-label">Height</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="info-box">
+            📐 Select the specific chart area you want to capture. This will crop the video to show only that region.
+          </div>
+        </div>
+        
+        <!-- About Section -->
+        <div class="section" id="about">
+          <h2>About TradingView PiP</h2>
+          
+          <p>This extension allows you to keep TradingView charts visible in a floating overlay window while working on other tasks.</p>
+          
+          <h3>Features</h3>
+          <ul style="margin: 15px 0; padding-left: 20px;">
+            <li>Real-time chart capture from TradingView tabs</li>
+            <li>Customizable area selection for focused viewing</li>
+            <li>Floating overlay window that stays on top</li>
+            <li>Adjustable window size and position</li>
+            <li>Low CPU usage with optimized capture</li>
+          </ul>
+          
+          <h3>How to Use</h3>
+          <ol style="margin: 15px 0; padding-left: 20px;">
+            <li>Navigate to TradingView in any tab</li>
+            <li>Click the extension icon and select "Select Chart Area"</li>
+            <li>Drag to select the chart region you want to monitor</li>
+            <li>Click "Start Picture-in-Picture" to begin capturing</li>
+            <li>The floating window will show your selected chart area</li>
+          </ol>
+          
+          <div class="info-box">
+            Version 1.0 | Made for enhanced trading workflows
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="settings.js"></script>
+</body>
+</html>

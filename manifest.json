@@ -1,0 +1,62 @@
+{
+  "manifest_version": 3,
+  "name": "TradingView Picture-in-Picture",
+  "version": "1.0",
+  "description": "Capture TradingView charts in a floating overlay window with area selection",
+  "permissions": [
+    "activeTab",
+    "tabCapture",
+    "storage",
+    "windows",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://www.tradingview.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.tradingview.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "TradingView PiP"
+  },
+  "options_page": "settings.html",
+  "commands": {
+    "toggle-pip": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+P",
+        "mac": "Command+Shift+P"
+      },
+      "description": "Toggle Picture-in-Picture"
+    },
+    "select-area": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+A",
+        "mac": "Command+Shift+A"
+      },
+      "description": "Select Chart Area"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["overlay.html", "selection-tool.js"],
+      "matches": ["https://www.tradingview.com/*"]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Extension Icons</title>
+</head>
+<body>
+    <h2>TradingView PiP Extension Icons</h2>
+    
+    <!-- 16x16 Icon -->
+    <h3>16x16 Icon</h3>
+    <svg width="16" height="16" id="icon16">
+        <circle cx="8" cy="8" r="7" fill="#2962ff" stroke="#1e4fc2" stroke-width="1"/>
+        <polyline points="3,12 6,8 10,6 13,4" stroke="white" stroke-width="1.5" fill="none"/>
+        <circle cx="6" cy="8" r="1" fill="white"/>
+        <circle cx="10" cy="6" r="1" fill="white"/>
+    </svg>
+    
+    <!-- 48x48 Icon -->
+    <h3>48x48 Icon</h3>
+    <svg width="48" height="48" id="icon48">
+        <circle cx="24" cy="24" r="20" fill="#2962ff" stroke="#1e4fc2" stroke-width="2"/>
+        <polyline points="10,34 18,24 30,18 38,12" stroke="white" stroke-width="3" fill="none"/>
+        <circle cx="18" cy="24" r="2" fill="white"/>
+        <circle cx="30" cy="18" r="2" fill="white"/>
+        <circle cx="38" cy="12" r="2" fill="white"/>
+    </svg>
+    
+    <!-- 128x128 Icon -->
+    <h3>128x128 Icon</h3>
+    <svg width="128" height="128" id="icon128">
+        <circle cx="64" cy="64" r="56" fill="#2962ff" stroke="#1e4fc2" stroke-width="4"/>
+        <polyline points="24,96 48,64 80,48 104,32" stroke="white" stroke-width="6" fill="none"/>
+        <circle cx="48" cy="64" r="4" fill="white"/>
+        <circle cx="80" cy="48" r="4" fill="white"/>
+        <circle cx="104" cy="32" r="4" fill="white"/>
+        <!-- PiP indicator -->
+        <rect x="84" y="84" width="32" height="24" fill="white" opacity="0.9" rx="2"/>
+        <rect x="88" y="88" width="24" height="16" fill="#2962ff" rx="1"/>
+    </svg>
+
+    <script>
+        // Function to convert SVG to PNG and download
+        function svgToPng(svgElement, filename, size) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            canvas.width = size;
+            canvas.height = size;
+            
+            const svgData = new XMLSerializer().serializeToString(svgElement);
+            const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
+            const svgUrl = URL.createObjectURL(svgBlob);
+            
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0);
+                URL.revokeObjectURL(svgUrl);
+                
+                canvas.toBlob(function(blob) {
+                    const a = document.createElement('a');
+                    a.download = filename;
+                    a.href = URL.createObjectURL(blob);
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                });
+            };
+            
+            img.src = svgUrl;
+        }
+        
+        // Add download buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            const sizes = [16, 48, 128];
+            
+            sizes.forEach(size => {
+                const button = document.createElement('button');
+                button.textContent = `Download ${size}x${size} PNG`;
+                button.style.margin = '5px';
+                button.onclick = () => {
+                    const svg = document.getElementById(`icon${size}`);
+                    svgToPng(svg, `icon${size}.png`, size);
+                };
+                
+                const heading = document.querySelector(`h3:nth-of-type(${sizes.indexOf(size) + 1})`);
+                heading.parentNode.insertBefore(button, heading.nextSibling);
+            });
+        });
+    </script>
+</body>
+</html>
