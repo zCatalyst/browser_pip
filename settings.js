@@ -280,11 +280,11 @@ function updatePreviewStats() {
 
 async function testAreaSelection() {
   try {
-    // Get TradingView tabs
-    const tabs = await chrome.tabs.query({ url: 'https://www.tradingview.com/*' });
+    // Get any webpage tabs
+    const tabs = await chrome.tabs.query({ url: ['https://*/*', 'http://*/*'] });
     
     if (tabs.length === 0) {
-      alert('Please open TradingView in a tab first!');
+      alert('Please open a webpage in a tab first!');
       return;
     }
     

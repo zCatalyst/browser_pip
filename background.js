@@ -12,8 +12,9 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.commands.onCommand.addListener(async (command) => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   
-  if (!tab.url.includes('tradingview.com')) {
-    console.log('Not on TradingView page');
+  // Check if we're on a supported page (any webpage)
+  if (!tab.url.startsWith('http')) {
+    console.log('Not on a supported webpage');
     return;
   }
   
@@ -34,7 +35,7 @@ chrome.commands.onCommand.addListener(async (command) => {
           });
         } else {
           // Notify user to select area first
-          chrome.tabs.sendMessage(tab.id, { action: 'showNotification', message: 'Please select a chart area first!' });
+          chrome.tabs.sendMessage(tab.id, { action: 'showNotification', message: 'Please select a content area first!' });
         }
       }
       break;

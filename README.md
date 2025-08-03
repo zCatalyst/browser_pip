@@ -1,15 +1,41 @@
-# TradingView Picture-in-Picture Extension
+# Browser PiP Extension
 
-A Chrome/Edge browser extension that allows you to capture TradingView charts in a floating overlay window with customizable area selection.
+A Chrome/Edge browser extension that allows you to capture any webpage content in Picture-in-Picture mode with customizable area selection.
 
 ## Features
 
-- **Real-time Chart Capture**: Capture live TradingView charts from any tab
-- **Area Selection**: Select specific chart regions to focus on
-- **Floating Overlay**: Always-on-top window that hovers over other applications
-- **Customizable Settings**: Adjust window size, position, opacity, and capture quality
-- **Live Preview**: Test your settings before activating picture-in-picture
+- **Universal Web Capture**: Capture any webpage content in real-time
+- **Area Selection**: Select specific content regions to focus on
+- **Picture-in-Picture**: Native browser PiP with full controls
+- **Customizable Settings**: Adjust capture quality and preview settings
+- **Live Preview**: Test your settings before activating PiP
 - **Low Resource Usage**: Optimized for minimal CPU and memory impact
+
+## Use Cases
+
+### 📊 Financial & Trading
+- **TradingView charts** - Monitor stock/crypto charts
+- **Yahoo Finance** - Track stock tickers
+- **Coinbase/Binance** - Watch crypto prices
+- **Bloomberg Terminal** - Monitor market data
+
+### 🎮 Gaming & Entertainment  
+- **Twitch streams** - Watch while browsing
+- **YouTube videos** - Keep playing while working
+- **Discord calls** - See who's talking
+- **Spotify/Apple Music** - Visualizer while working
+
+### 💼 Productivity & Work
+- **Slack/Discord** - Monitor channels while working
+- **Email notifications** - Keep inbox visible
+- **Calendar apps** - Track meetings/schedule
+- **Project management** - Jira, Trello, Asana boards
+
+### 📈 Analytics & Monitoring
+- **Google Analytics** - Real-time data
+- **Server monitoring** - Dashboard tracking
+- **Social media** - Engagement metrics
+- **Website performance** - Uptime monitoring
 
 ## Installation
 
@@ -21,11 +47,12 @@ A Chrome/Edge browser extension that allows you to capture TradingView charts in
 
 ## How to Use
 
-1. **Navigate to TradingView** in any browser tab
+1. **Navigate to any webpage** in any browser tab
 2. **Click the extension icon** in your toolbar
-3. **Select Chart Area**: Click "Select Chart Area" and drag to select the region you want to monitor
-4. **Start Capture**: Click "Start Picture-in-Picture" to begin capturing
-5. **Enjoy**: The floating window will show your selected chart area in real-time
+3. **Select Content Area**: Click "Select Content Area" and drag to select the region you want to monitor
+4. **Open Settings**: Click "Settings & Preview" to open the settings page
+5. **Start Preview**: Click "Start Preview" and select the tab to capture
+6. **Use PiP**: Click "📺 PiP" to open browser's native Picture-in-Picture window
 
 ## Settings & Configuration
 

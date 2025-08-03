@@ -22,8 +22,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Get current tab
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       
-      if (!tab.url.includes('tradingview.com')) {
-        alert('Please navigate to TradingView first!');
+      // Check if we're on a supported webpage
+      if (!tab.url.startsWith('http')) {
+        alert('Please navigate to a webpage first!');
         return;
       }
       
@@ -60,7 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const result = await chrome.storage.local.get(['selectedArea']);
       
       if (!result.selectedArea) {
-        alert('Please select a chart area first!');
+        alert('Please select a content area first!');
         return;
       }
       

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "TradingView Picture-in-Picture",
+  "name": "Browser PiP",
   "version": "1.0",
-  "description": "Capture TradingView charts in a floating overlay window with area selection",
+  "description": "Capture any webpage content in Picture-in-Picture mode with area selection",
   "permissions": [
     "activeTab",
     "tabCapture",
@@ -12,7 +12,8 @@
     "tabs"
   ],
   "host_permissions": [
-    "https://www.tradingview.com/*"
+    "https://*/*",
+    "http://*/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -22,14 +23,14 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.tradingview.com/*"],
+      "matches": ["https://*/*", "http://*/*"],
       "js": ["content.js"],
       "css": ["content.css"]
     }
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "TradingView PiP"
+    "default_title": "Browser PiP"
   },
   "options_page": "settings.html",
   "commands": {
@@ -45,7 +46,7 @@
         "default": "Ctrl+Shift+A",
         "mac": "Command+Shift+A"
       },
-      "description": "Select Chart Area"
+      "description": "Select Content Area"
     }
   },
   "web_accessible_resources": [
