@@ -6,10 +6,14 @@ let selectedArea = null;
 
 // Listen for messages from popup and background
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log('Content script received message:', message);
+  
   switch (message.action) {
     case 'ping':
       // Simple ping to check if content script is loaded
+      console.log('Content script ping received');
       sendResponse({ status: 'ok' });
+      return true; // Keep message channel open
       break;
     case 'showAreaSelector':
       showAreaSelector();
@@ -28,8 +32,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 function showAreaSelector() {
-  if (isSelectingArea) return;
+  if (isSelectingArea) {
+    console.log('Area selector already active');
+    return;
+  }
   
+  console.log('Starting area selector');
   isSelectingArea = true;
   createSelectionOverlay();
   addSelectionEvents();
@@ -44,13 +52,21 @@ function hideAreaSelector() {
 }
 
 function createSelectionOverlay() {
+  console.log('Creating selection overlay');
+  
+  // Remove any existing overlay first
+  const existingOverlay = document.getElementById('tvpip-selection-overlay');
+  if (existingOverlay) {
+    existingOverlay.remove();
+  }
+  
   // Create overlay container
   selectionOverlay = document.createElement('div');
   selectionOverlay.id = 'tvpip-selection-overlay';
   selectionOverlay.innerHTML = `
     <div id="tvpip-selection-area"></div>
     <div id="tvpip-selection-instructions">
-      Click and drag to select the chart area you want to capture
+      Click and drag to select the content area you want to capture
       <div id="tvpip-selection-buttons">
         <button id="tvpip-confirm-selection">✓ Confirm</button>
         <button id="tvpip-cancel-selection">✕ Cancel</button>
@@ -59,6 +75,10 @@ function createSelectionOverlay() {
   `;
   
   document.body.appendChild(selectionOverlay);
+  console.log('Selection overlay created and added to page');
+  
+  // Show instructions initially
+  document.getElementById('tvpip-selection-instructions').style.display = 'block';
   
   // Add event listeners for buttons
   document.getElementById('tvpip-confirm-selection').addEventListener('click', confirmSelection);
@@ -92,6 +112,11 @@ function removeSelectionEvents() {
 function onMouseDown(e) {
   if (!isSelectingArea || e.target.closest('#tvpip-selection-instructions')) return;
   
+  console.log('Mouse down for area selection at:', e.clientX, e.clientY);
+  
+  // Hide instructions when starting to draw
+  document.getElementById('tvpip-selection-instructions').style.display = 'none';
+  
   isDrawing = true;
   startX = e.clientX;
   startY = e.clientY;
@@ -102,6 +127,9 @@ function onMouseDown(e) {
   selectionArea.style.top = startY + 'px';
   selectionArea.style.width = '0px';
   selectionArea.style.height = '0px';
+  
+  e.preventDefault();
+  e.stopPropagation();
 }
 
 function onMouseMove(e) {
@@ -125,13 +153,24 @@ function onMouseMove(e) {
 function onMouseUp(e) {
   if (!isDrawing) return;
   
+  console.log('Mouse up for area selection');
+  
   isDrawing = false;
   endX = e.clientX;
   endY = e.clientY;
   
-  // Show confirmation buttons
-  const instructions = document.getElementById('tvpip-selection-instructions');
-  instructions.style.display = 'block';
+  // Only show confirmation if we have a meaningful selection
+  const width = Math.abs(endX - startX);
+  const height = Math.abs(endY - startY);
+  
+  if (width > 10 && height > 10) {
+    // Show confirmation buttons
+    const instructions = document.getElementById('tvpip-selection-instructions');
+    instructions.style.display = 'block';
+    console.log('Selection area created:', width, 'x', height);
+  } else {
+    console.log('Selection too small, ignoring');
+  }
 }
 
 function confirmSelection() {
@@ -139,6 +178,8 @@ function confirmSelection() {
     alert('Please select an area first');
     return;
   }
+  
+  console.log('Confirming selection:', startX, startY, endX, endY);
   
   // Calculate relative coordinates
   const width = Math.abs(endX - startX);
@@ -155,16 +196,30 @@ function confirmSelection() {
     windowHeight: window.innerHeight
   };
   
-  // Save selected area
-  chrome.storage.local.set({ selectedArea: selectedArea });
+  console.log('Selected area:', selectedArea);
+  
+  // Save selected area and set flags for immediate PiP
+  chrome.storage.local.set({ 
+    selectedArea: selectedArea,
+    autoStartPreview: true,
+    autoStartPiP: true,  // New flag for immediate PiP
+    isCapturing: true
+  }, () => {
+    console.log('Area saved to storage with auto-PiP flags');
+  });
   
   // Notify popup that area is selected
-  chrome.runtime.sendMessage({ action: 'areaSelected', area: selectedArea });
+  chrome.runtime.sendMessage({ action: 'areaSelected', area: selectedArea }, (response) => {
+    console.log('Notified extension about area selection');
+  });
   
   hideAreaSelector();
   
-  // Show success message
-  showNotification('Chart area selected! You can now start picture-in-picture capture.');
+  // Show notification and auto-start PiP
+  showNotification('Content area selected! Starting Picture-in-Picture...');
+  
+  // Open settings page which will auto-start preview and then PiP
+  chrome.runtime.sendMessage({ action: 'openSettingsForPiP' });
 }
 
 function onKeyDown(e) {

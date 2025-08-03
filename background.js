@@ -62,10 +62,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // Open settings page
       chrome.runtime.openOptionsPage();
       break;
+    case 'openSettingsForPiP':
+      // Open settings page for immediate PiP after area selection
+      console.log('Opening settings page for immediate PiP');
+      chrome.runtime.openOptionsPage();
+      break;
   }
 });
 
-// Removed startTabCapture function as capture is now handled in overlay window
 
 function stopCapture() {
   if (captureStream) {

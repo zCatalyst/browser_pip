@@ -7,12 +7,20 @@ let previewCtx = null;
 let isPreviewActive = false;
 let selectedArea = null;
 let previewAnimationId = null;
+let croppedVideo = null; // Video element for cropped PiP
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Initialize elements
   previewVideo = document.getElementById('preview-video');
   previewCanvas = document.getElementById('preview-canvas');
-  previewCtx = previewCanvas.getContext('2d');
+  previewCtx = previewCanvas.getContext('2d', {
+    alpha: false, // Better performance for opaque content
+    desynchronized: true // Better performance for animations
+  });
+  
+  // Set high-quality rendering as default
+  previewCtx.imageSmoothingEnabled = true;
+  previewCtx.imageSmoothingQuality = 'high';
   
   // Load saved settings
   await loadSettings();
@@ -26,7 +34,34 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Update area status
   await updateAreaStatus();
   
-  // Note: Preview is now manual - user clicks "Start Preview" button
+  // Check if we should auto-start preview from popup
+  const result = await chrome.storage.local.get(['autoStartPreview', 'autoStartPiP']);
+  if (result.autoStartPreview) {
+    // Clear the flags
+    await chrome.storage.local.remove(['autoStartPreview', 'autoStartPiP']);
+    
+    // Auto-start preview after a short delay to ensure UI is ready
+    setTimeout(async () => {
+      try {
+        await startPreview();
+        
+        // Check if we should also auto-start PiP
+        if (result.autoStartPiP) {
+          // Set up auto-PiP on next user interaction
+          setTimeout(() => {
+            setupAutoPiP();
+          }, 1000); // Wait 1 second for video to be ready
+        } else {
+          showNotification('Preview started! Click the 📺 PiP button to enter Picture-in-Picture mode.');
+        }
+      } catch (error) {
+        console.error('Auto-start failed:', error);
+        showNotification('Failed to auto-start preview. Please click "Start Preview" manually.');
+        // Reset capture state on failure
+        chrome.storage.local.set({ isCapturing: false });
+      }
+    }, 500);
+  }
 });
 
 function setupNavigation() {
@@ -102,6 +137,7 @@ function updateOpacityDisplay() {
   document.getElementById('opacity-value').textContent = opacity + '%';
 }
 
+
 async function startPreview() {
   if (isPreviewActive) return;
   
@@ -118,53 +154,7 @@ async function startPreview() {
     });
     
     console.log('Screen capture stream obtained:', previewStream);
-    
-    // Set up video
-    previewVideo.srcObject = previewStream;
-    previewVideo.style.display = 'block';
-    document.getElementById('preview-content').style.display = 'none';
-    
-    const container = document.getElementById('preview-container');
-    container.classList.add('active');
-    
-    isPreviewActive = true;
-    
-    // Wait for video to load
-    await new Promise((resolve, reject) => {
-      previewVideo.addEventListener('loadedmetadata', () => {
-        console.log('Video loaded - width:', previewVideo.videoWidth, 'height:', previewVideo.videoHeight);
-        updatePreviewStats();
-        
-        // Enable PiP button
-        document.getElementById('pip-btn').disabled = false;
-        
-        if (selectedArea) {
-          startPreviewCropping();
-        }
-        
-        resolve();
-      }, { once: true });
-      
-      previewVideo.addEventListener('error', (e) => {
-        console.error('Video error:', e);
-        reject(new Error('Video failed to load'));
-      }, { once: true });
-    });
-    
-    // Try to play the video
-    try {
-      await previewVideo.play();
-      console.log('Video play successful');
-    } catch (playError) {
-      console.error('Video play failed:', playError);
-      // Continue anyway, the video might still work for PiP
-    }
-    
-    // Handle stream end
-    previewStream.getVideoTracks()[0].addEventListener('ended', () => {
-      console.log('Stream ended');
-      stopPreview();
-    });
+    await setupPreviewStream();
     
   } catch (error) {
     console.error('Failed to start preview:', error);
@@ -182,32 +172,174 @@ async function startPreview() {
   }
 }
 
+async function setupPreviewStream() {
+  // Set up video
+  previewVideo.srcObject = previewStream;
+  previewVideo.style.display = 'block';
+  document.getElementById('preview-content').style.display = 'none';
+  
+  const container = document.getElementById('preview-container');
+  container.classList.add('active');
+  
+  isPreviewActive = true;
+  
+  // Update capture state in storage
+  chrome.storage.local.set({ isCapturing: true });
+  
+  // Wait for video to load
+  await new Promise((resolve, reject) => {
+    previewVideo.addEventListener('loadedmetadata', () => {
+      console.log('Video loaded - width:', previewVideo.videoWidth, 'height:', previewVideo.videoHeight);
+      updatePreviewStats();
+      
+      // Enable PiP button
+      document.getElementById('pip-btn').disabled = false;
+      
+      if (selectedArea) {
+        startPreviewCropping();
+      }
+      
+      resolve();
+    }, { once: true });
+    
+    previewVideo.addEventListener('error', (e) => {
+      console.error('Video error:', e);
+      reject(new Error('Video failed to load'));
+    }, { once: true });
+  });
+  
+  // Try to play the video
+  try {
+    await previewVideo.play();
+    console.log('Video play successful');
+  } catch (playError) {
+    console.error('Video play failed:', playError);
+    // Continue anyway, the video might still work for PiP
+  }
+  
+  // Handle stream end
+  previewStream.getVideoTracks()[0].addEventListener('ended', () => {
+    console.log('Stream ended');
+    stopPreview();
+    showNotification('Capture ended. Preview stopped.');
+  });
+}
+
 function startPreviewCropping() {
   if (!selectedArea || !previewVideo.videoWidth) return;
   
   previewVideo.style.display = 'none';
   previewCanvas.style.display = 'block';
   
-  // Set canvas size
-  const aspectRatio = selectedArea.width / selectedArea.height;
-  const maxWidth = 400;
-  const maxHeight = 300;
+  // Calculate source dimensions for cropping
+  const scaleX = previewVideo.videoWidth / selectedArea.windowWidth;
+  const scaleY = previewVideo.videoHeight / selectedArea.windowHeight;
+  
+  const sourceWidth = selectedArea.width * scaleX;
+  const sourceHeight = selectedArea.height * scaleY;
+  
+  // Set canvas to native resolution of selected area for best quality
+  const aspectRatio = sourceWidth / sourceHeight;
+  
+  // Use higher resolution for PiP quality, but limit to reasonable size
+  const maxPiPWidth = 1280;
+  const maxPiPHeight = 720;
   
   let canvasWidth, canvasHeight;
   
-  if (maxWidth / maxHeight > aspectRatio) {
-    canvasHeight = maxHeight;
-    canvasWidth = canvasHeight * aspectRatio;
+  // For PiP quality, use source resolution up to max limits
+  if (sourceWidth <= maxPiPWidth && sourceHeight <= maxPiPHeight) {
+    canvasWidth = sourceWidth;
+    canvasHeight = sourceHeight;
   } else {
-    canvasWidth = maxWidth;
-    canvasHeight = canvasWidth / aspectRatio;
+    // Scale down proportionally if source is too large
+    if (maxPiPWidth / maxPiPHeight > aspectRatio) {
+      canvasHeight = maxPiPHeight;
+      canvasWidth = canvasHeight * aspectRatio;
+    } else {
+      canvasWidth = maxPiPWidth;
+      canvasHeight = canvasWidth / aspectRatio;
+    }
   }
   
   previewCanvas.width = canvasWidth;
   previewCanvas.height = canvasHeight;
   
+  // Set display size for preview (smaller than actual canvas resolution)
+  const maxDisplayWidth = 400;
+  const maxDisplayHeight = 300;
+  
+  let displayWidth, displayHeight;
+  if (maxDisplayWidth / maxDisplayHeight > aspectRatio) {
+    displayHeight = maxDisplayHeight;
+    displayWidth = displayHeight * aspectRatio;
+  } else {
+    displayWidth = maxDisplayWidth;
+    displayHeight = displayWidth / aspectRatio;
+  }
+  
+  previewCanvas.style.width = displayWidth + 'px';
+  previewCanvas.style.height = displayHeight + 'px';
+  
+  console.log('Canvas resolution:', canvasWidth, 'x', canvasHeight);
+  console.log('Canvas display size:', displayWidth, 'x', displayHeight);
+  
+  // Create a video element for PiP from the canvas stream
+  createCroppedVideoForPiP();
+  
   // Start drawing
   drawPreviewFrame();
+}
+
+function createCroppedVideoForPiP() {
+  // Create or reuse video element for cropped stream
+  if (!croppedVideo) {
+    croppedVideo = document.createElement('video');
+    croppedVideo.style.display = 'none';
+    croppedVideo.muted = true;
+    croppedVideo.playsInline = true;
+    croppedVideo.autoplay = true;
+    document.body.appendChild(croppedVideo);
+  }
+  
+  // Clean up any existing stream
+  if (croppedVideo.srcObject) {
+    croppedVideo.srcObject.getTracks().forEach(track => track.stop());
+  }
+  
+  // Create a high-quality stream from the canvas
+  // Use 60 FPS for smoother motion
+  const canvasStream = previewCanvas.captureStream(60);
+  
+  // Get the video track and configure it for better quality if possible
+  const videoTrack = canvasStream.getVideoTracks()[0];
+  if (videoTrack) {
+    // Apply constraints for better quality
+    videoTrack.applyConstraints({
+      width: { ideal: previewCanvas.width },
+      height: { ideal: previewCanvas.height },
+      frameRate: { ideal: 60 }
+    }).catch(err => console.log('Could not apply track constraints:', err));
+  }
+  
+  croppedVideo.srcObject = canvasStream;
+  
+  // Wait for video to be ready
+  croppedVideo.addEventListener('loadedmetadata', async () => {
+    try {
+      await croppedVideo.play();
+      console.log('Cropped video ready for PiP at', croppedVideo.videoWidth, 'x', croppedVideo.videoHeight);
+    } catch (error) {
+      console.error('Failed to play cropped video:', error);
+    }
+  }, { once: true });
+  
+  // Force the canvas to start streaming by drawing at least one frame
+  setTimeout(() => {
+    if (previewCanvas && selectedArea) {
+      drawPreviewFrame();
+    }
+  }, 100);
 }
 
 function drawPreviewFrame() {
@@ -222,10 +354,17 @@ function drawPreviewFrame() {
   const sourceWidth = selectedArea.width * scaleX;
   const sourceHeight = selectedArea.height * scaleY;
   
-  // Draw cropped frame
+  // Enable high-quality image rendering
+  previewCtx.imageSmoothingEnabled = true;
+  previewCtx.imageSmoothingQuality = 'high';
+  
+  // Clear canvas for clean frame
+  previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+  
+  // Draw cropped frame with high quality
   previewCtx.drawImage(
     previewVideo,
-    sourceX, sourceY, sourceWidth, sourceHeight,
+    Math.round(sourceX), Math.round(sourceY), Math.round(sourceWidth), Math.round(sourceHeight),
     0, 0, previewCanvas.width, previewCanvas.height
   );
   
@@ -248,6 +387,16 @@ function stopPreview() {
     previewStream = null;
   }
   
+  // Clean up cropped video
+  if (croppedVideo) {
+    if (croppedVideo.srcObject) {
+      croppedVideo.srcObject.getTracks().forEach(track => track.stop());
+      croppedVideo.srcObject = null;
+    }
+    croppedVideo.remove();
+    croppedVideo = null;
+  }
+  
   previewVideo.style.display = 'none';
   previewCanvas.style.display = 'none';
   document.getElementById('preview-content').style.display = 'block';
@@ -261,6 +410,9 @@ function stopPreview() {
   // Reset stats
   document.getElementById('preview-fps').textContent = '--';
   document.getElementById('preview-resolution').textContent = '--';
+  
+  // Update capture state in storage
+  chrome.storage.local.set({ isCapturing: false });
 }
 
 function updatePreviewStats() {
@@ -288,12 +440,37 @@ async function testAreaSelection() {
       return;
     }
     
-    // Use the first TradingView tab
+    // Use the first webpage tab
     const tab = tabs[0];
     
     // Focus the tab
     await chrome.tabs.update(tab.id, { active: true });
     await chrome.windows.update(tab.windowId, { focused: true });
+    
+    // Check if content script is loaded, inject if needed
+    try {
+      await chrome.tabs.sendMessage(tab.id, { action: 'ping' });
+    } catch (error) {
+      // Content script not loaded, inject both script and CSS
+      try {
+        await chrome.scripting.insertCSS({
+          target: { tabId: tab.id },
+          files: ['content.css']
+        });
+        
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content.js']
+        });
+        
+        // Wait for script to load
+        await new Promise(resolve => setTimeout(resolve, 200));
+      } catch (injectionError) {
+        console.error('Failed to inject content script:', injectionError);
+        alert('Failed to inject content script. Please refresh the page and try again.');
+        return;
+      }
+    }
     
     // Close settings page temporarily
     const currentWindow = await chrome.windows.getCurrent();
@@ -304,7 +481,7 @@ async function testAreaSelection() {
     
   } catch (error) {
     console.error('Error testing area selection:', error);
-    alert('Please refresh the TradingView page and try again.');
+    alert('Please refresh the webpage and try again.');
   }
 }
 
@@ -319,6 +496,22 @@ async function clearArea() {
   
   // Update preview if active
   if (isPreviewActive && previewCanvas.style.display === 'block') {
+    // Stop animation and clean up cropped video
+    if (previewAnimationId) {
+      cancelAnimationFrame(previewAnimationId);
+      previewAnimationId = null;
+    }
+    
+    if (croppedVideo) {
+      if (croppedVideo.srcObject) {
+        croppedVideo.srcObject.getTracks().forEach(track => track.stop());
+        croppedVideo.srcObject = null;
+      }
+      croppedVideo.remove();
+      croppedVideo = null;
+    }
+    
+    // Switch back to full video
     previewCanvas.style.display = 'none';
     previewVideo.style.display = 'block';
   }
@@ -384,7 +577,7 @@ async function saveCaptureSettings() {
 
 async function togglePiP() {
   try {
-    if (!previewVideo || !isPreviewActive) {
+    if (!isPreviewActive) {
       showNotification('No active video to enter PiP mode');
       return;
     }
@@ -400,15 +593,113 @@ async function togglePiP() {
       await document.exitPictureInPicture();
       showNotification('Exited PiP mode');
     } else {
+      // Determine which video element to use for PiP
+      let videoForPiP = previewVideo;
+      
+      // If area is selected and cropped video is ready, use the cropped video
+      if (selectedArea && croppedVideo && croppedVideo.srcObject) {
+        videoForPiP = croppedVideo;
+        console.log('Using cropped video for PiP');
+      } else {
+        console.log('Using original video for PiP');
+      }
+      
+      // Wait a moment for video to be ready if needed
+      if (videoForPiP.readyState < 2) {
+        showNotification('Preparing video for PiP...');
+        await new Promise(resolve => {
+          const onReady = () => {
+            videoForPiP.removeEventListener('canplay', onReady);
+            resolve();
+          };
+          videoForPiP.addEventListener('canplay', onReady);
+        });
+      }
+      
       // Enter PiP mode
-      await previewVideo.requestPictureInPicture();
-      showNotification('Entered PiP mode');
+      await videoForPiP.requestPictureInPicture();
+      
+      if (selectedArea && videoForPiP === croppedVideo) {
+        showNotification('Entered PiP mode with selected area');
+      } else {
+        showNotification('Entered PiP mode');
+      }
     }
     
   } catch (error) {
     console.error('PiP error:', error);
     showNotification('Failed to toggle PiP: ' + error.message);
   }
+}
+
+function setupAutoPiP() {
+  // Make PiP button prominent
+  const pipBtn = document.getElementById('pip-btn');
+  if (!pipBtn) return;
+  
+  // Make the button very prominent
+  pipBtn.style.cssText = `
+    background: #ff4444 !important;
+    color: white !important;
+    font-size: 18px !important;
+    padding: 15px 25px !important;
+    border: 3px solid #fff !important;
+    border-radius: 8px !important;
+    box-shadow: 0 0 20px rgba(255, 68, 68, 0.5) !important;
+    animation: pulse 1s infinite !important;
+    transform: scale(1.1) !important;
+    position: relative !important;
+    z-index: 1000 !important;
+  `;
+  
+  // Add pulsing animation
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes pulse {
+      0% { box-shadow: 0 0 20px rgba(255, 68, 68, 0.5); }
+      50% { box-shadow: 0 0 30px rgba(255, 68, 68, 0.8); }
+      100% { box-shadow: 0 0 20px rgba(255, 68, 68, 0.5); }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  // Show prominent notification
+  showNotification('🎯 Click anywhere on this page to start Picture-in-Picture automatically!');
+  
+  // Set up one-time click listener for auto-PiP
+  const autoPiPHandler = async (event) => {
+    try {
+      // Remove the listener so it only fires once
+      document.removeEventListener('click', autoPiPHandler);
+      
+      // Reset button style
+      pipBtn.style.cssText = '';
+      
+      await togglePiP();
+      showNotification('Picture-in-Picture started automatically!');
+      
+      // Hide the settings window after successful PiP start
+      setTimeout(() => {
+        chrome.windows.getCurrent().then(currentWindow => {
+          if (currentWindow) {
+            chrome.windows.update(currentWindow.id, { state: 'minimized' });
+          }
+        });
+      }, 1500);
+      
+    } catch (pipError) {
+      console.error('Auto-PiP failed:', pipError);
+      showNotification('Click the 📺 PiP button to enter Picture-in-Picture mode.');
+      // Reset button style on error
+      pipBtn.style.cssText = '';
+    }
+  };
+  
+  // Add click listener to document
+  document.addEventListener('click', autoPiPHandler);
+  
+  // Also add it specifically to the PiP button
+  pipBtn.addEventListener('click', autoPiPHandler);
 }
 
 function showNotification(message) {
